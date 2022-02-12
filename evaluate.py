@@ -105,8 +105,8 @@ def main():
 
     train_loader, val_loader, test_loader = get_dataloaders(augment=False)
 
-    # print("Train")
-    # evaluate(model, train_loader, loss_fn, args.Ncrop, device)
+    print("Train")
+    evaluate(model, train_loader, loss_fn, args.Ncrop, device)
 
     print("Val")
     evaluate(model, val_loader, loss_fn, args.Ncrop, device)
