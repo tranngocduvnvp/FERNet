@@ -97,7 +97,7 @@ def get_dataloaders(path='datasets/fer2013/fer2013.csv', bs=64, augment=True):
                 [transforms.RandomAffine(0, translate=(0.2, 0.2))], p=0.5),
             transforms.RandomHorizontalFlip(),
             transforms.RandomApply([transforms.RandomRotation(10)], p=0.5),
-            transforms.TenCrop(40),
+            transforms.FiveCrop(40),
             transforms.Lambda(lambda crops: torch.stack(
                 [transforms.ToTensor()(crop) for crop in crops])),
             transforms.Lambda(lambda tensors: torch.stack(
