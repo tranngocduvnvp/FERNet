@@ -1,7 +1,5 @@
 '''ResNet in PyTorch.
-
 For Pre-activation ResNet, see 'preact_resnet.py'.
-
 Reference:
 [1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
     Deep Residual Learning for Image Recognition. arXiv:1512.03385
@@ -40,6 +38,8 @@ class DepthwiseSeparableConvolution(nn.Module):
         return out
 
 
+
+
 class Channel_attention(nn.Module):
     def __init__(self,channel,reduction=16):
         super().__init__()
@@ -74,15 +74,16 @@ class Spatial_attention(nn.Module):
 
 
     def forward(self, x):
+        bs, c, h, w = x.shape
         att_map = self.reduce_dim(self.relu(x)) #[bs, 1, h, w]
         att_map = self.sigmoid(att_map) #[bs, 1, h, w]
         spatial_attention = att_map*x
         return spatial_attention
 
 
-class RBAM(nn.Module):
+class MDAM(nn.Module):
     def __init__(self, in_channels, reduce_factor=16, increase_factor=4, residual=True):
-        super(RBAM, self).__init__()
+        super(MDAM, self).__init__()
         self.residual = residual
         self.channel_attention = Channel_attention(channel=in_channels)
         self.spatial_attention = Spatial_attention(in_channels)
@@ -126,7 +127,7 @@ class BasicBlock(nn.Module):
         self.bn1 = nn.BatchNorm2d(planes)
             
         self.bn2 = nn.BatchNorm2d(planes)
-        self.attention = RBAM(in_channels = planes)
+        self.attention = MDAM(in_channels = planes)
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
