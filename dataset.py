@@ -81,7 +81,7 @@ def get_dataloaders(path='datasets/fer2013/fer2013.csv', bs=64, augment=True):
 
     test_transform = transforms.Compose([
         transforms.Grayscale(),
-        transforms.FiveCrop(40),
+        transforms.TenCrop(40),
         transforms.Lambda(lambda crops: torch.stack(
             [transforms.ToTensor()(crop) for crop in crops])),
         transforms.Lambda(lambda tensors: torch.stack(
@@ -110,7 +110,6 @@ def get_dataloaders(path='datasets/fer2013/fer2013.csv', bs=64, augment=True):
 
     # X = np.vstack((xtrain, xval))
     # Y = np.hstack((ytrain, yval))
-    # train = CustomDataset(X, Y, train_transform)
 
     train = CustomDataset(xtrain, ytrain, train_transform)
     val = CustomDataset(xval, yval, test_transform)
