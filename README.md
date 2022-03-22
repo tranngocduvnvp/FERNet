@@ -1,7 +1,7 @@
 # MDNet
 # Training
 ```
-python train.py --name='name_version' --epoch=128
+python train.py --name='name_version' --epoch=300 --batch_size=128
 ```
 # Evaluate
 ```
