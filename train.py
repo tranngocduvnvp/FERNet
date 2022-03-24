@@ -1,5 +1,7 @@
 import argparse
+from email.mime import image
 import os
+from statistics import mode
 import time
 import warnings
 
@@ -12,19 +14,21 @@ from torch.utils.tensorboard import SummaryWriter
 
 from dataset import get_dataloaders
 from utils import (Logger, get_model, mixup_criterion, mixup_data, random_seed, save_checkpoint, smooth_one_hot,
-                   cross_entropy)
+                   cross_entropy, batch_weight_triplet_loss)
 
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='USTC Computer Vision Final Project')
 parser.add_argument('--arch', default="ResNet18", type=str)
 parser.add_argument('--epochs', default=300, type=int)
-parser.add_argument('--batch_size', default=64, type=int)
+parser.add_argument('--batch_size', default=128, type=int)
 parser.add_argument('--scheduler', default="reduce", type=str, help='[reduce, cos]')
 parser.add_argument('--lr', default=0.1, type=float)
 parser.add_argument('--momentum', default=0.9, type=float)
 parser.add_argument('--weight_decay', default=1e-4, type=float)
 parser.add_argument('--label_smooth', default=True, type=eval)
+parser.add_argument('--batch_weight', default=True, type=eval)
+parser.add_argument('--alpha', default=0.1, type=float)
 parser.add_argument('--label_smooth_value', default=0.1, type=float)
 parser.add_argument('--mixup', default=True, type=eval)
 parser.add_argument('--mixup_alpha', default=1.0, type=float)
@@ -173,7 +177,10 @@ def train(model, train_loader, loss_fn, optimizer, epoch, device, scaler, writer
                     images, nrow=10, normalize=True, scale_each=True)
                 writer.add_image("Augemented image", img_grid, i)
 
-            outputs = model(images)
+            if args.batch_weight:
+                outputs, auxi = model(images)
+            else:
+                outputs = model(images)
 
             if args.label_smooth:
                 if args.mixup:
@@ -184,19 +191,29 @@ def train(model, train_loader, loss_fn, optimizer, epoch, device, scaler, writer
                         labels_b, classes=7, smoothing=args.label_smooth_value)
                     loss = mixup_criterion(
                         loss_fn, outputs, soft_labels_a, soft_labels_b, lam)
+
+                    if args.batch_weight:
+                        loss +=args.alpha*batch_weight_triplet_loss(labels, auxi)
                 else:
                     # label smoorth
                     soft_labels = smooth_one_hot(
                         labels, classes=7, smoothing=args.label_smooth_value)
                     loss = loss_fn(outputs, soft_labels)
+                    if args.batch_weight:
+                        loss +=args.alpha*batch_weight_triplet_loss(labels, auxi)
             else:
                 if args.mixup:
                     # mixup
                     loss = mixup_criterion(
                         loss_fn, outputs, labels_a, labels_b, lam)
+
+                    if args.batch_weight:
+                        loss +=args.alpha*batch_weight_triplet_loss(labels, auxi)
                 else:
                     # normal CE
                     loss = loss_fn(outputs, labels)
+                    if args.batch_weight:
+                        loss +=args.alpha*batch_weight_triplet_loss(labels, auxi)
         optimizer.zero_grad()
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -225,14 +242,14 @@ def evaluate(model, val_loader, device, args):
                 images = images.view(-1, c, h, w)
 
                 # forward
-                outputs = model(images)
+                outputs, _ = model(images)
 
                 # combine results across the crops
                 outputs = outputs.view(bs, ncrops, -1)
                 outputs = torch.sum(outputs, dim=1) / ncrops
 
             else:
-                outputs = model(images)
+                outputs,_ = model(images)
 
             loss = nn.CrossEntropyLoss()(outputs, labels)
 

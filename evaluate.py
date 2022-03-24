@@ -99,8 +99,8 @@ def main():
     loss_fn = nn.CrossEntropyLoss()
 
     model = get_model(args.arch).to(device)
-    print(model)
-    checkpoint = torch.load(args.checkpoint, map_location = torch.device(device))
+    # print(model)
+    checkpoint = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
 
     train_loader, val_loader, test_loader = get_dataloaders(augment=False)

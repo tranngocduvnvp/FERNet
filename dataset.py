@@ -1,3 +1,4 @@
+
 """
 Adapted from https://github.com/usef-kh/fer/tree/master/data
 """
@@ -112,7 +113,8 @@ def get_dataloaders(path='datasets/fer2013/fer2013.csv', bs=64, augment=True):
     # Y = np.hstack((ytrain, yval))
 
     train = CustomDataset(xtrain, ytrain, train_transform)
-    val = CustomDataset(xval, yval, test_transform)
+    # train = CustomDataset(X, Y, train_transform)
+    val = CustomDataset(xtest, ytest, test_transform)
     test = CustomDataset(xtest, ytest, test_transform)
 
     trainloader = DataLoader(train, batch_size=bs, shuffle=True, num_workers=2)
