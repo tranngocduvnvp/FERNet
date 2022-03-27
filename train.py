@@ -1,5 +1,4 @@
 import argparse
-from email.mime import image
 import os
 from statistics import mode
 import time
@@ -7,10 +6,8 @@ import warnings
 
 import torch
 import torch.nn as nn
-import torchvision.utils as vutils
 from torch.autograd import Variable
 from torch.cuda.amp import GradScaler, autocast
-from torch.utils.tensorboard import SummaryWriter
 
 from dataset import get_dataloaders
 from utils import (Logger, get_model, mixup_criterion, mixup_data, random_seed, save_checkpoint, smooth_one_hot,
@@ -60,9 +57,6 @@ def main():
 
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
-
-    writer = SummaryWriter(os.path.join(
-        args.results, args.name, args_path, 'tensorboard_logs'))
 
     logger = Logger(os.path.join(args.results,
                                  args.name, args_path, 'output.log'))
@@ -114,7 +108,7 @@ def main():
     for epoch in range(1, args.epochs + 1):
         start_t = time.time()
         train_loss, train_acc = train(
-            model, train_loader, loss_fn, optimizer, epoch, device, scaler, writer, args)
+            model, train_loader, loss_fn, optimizer, epoch, device, scaler, args)
         val_loss, val_acc = evaluate(model, val_loader, device, args)
 
         if args.scheduler == 'cos':
@@ -122,23 +116,12 @@ def main():
         elif args.scheduler == 'reduce':
             scheduler.step(val_acc)
 
-        writer.add_scalar("Train/Loss", train_loss.item(), epoch)
-        writer.add_scalar("Train/Accuracy", train_acc, epoch)
-        writer.add_scalar("Valid/Loss", val_loss.item(), epoch)
-        writer.add_scalar("Valid/Accuracy", val_acc, epoch)
-
-        writer.add_scalars("Loss", {"Train": train_loss.item()}, epoch)
-        writer.add_scalars("Accuracy", {"Train": train_acc}, epoch)
-        writer.add_scalars("Loss", {"Valid": val_loss.item()}, epoch)
-        writer.add_scalars("Accuracy", {"Valid": val_acc}, epoch)
-
         epoch_time = time.time() - start_t
         logger.info("%d\t %.4f \t %.4f \t %.4f \t %.4f \t %.4f", epoch, epoch_time, train_loss, train_acc, val_loss,
                     val_acc)
 
         is_best = val_acc > best_acc
         best_acc = max(val_acc, best_acc)
-        writer.add_scalar("Valid/Best Accuracy", best_acc, epoch)
         save_checkpoint({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
@@ -148,10 +131,9 @@ def main():
         }, epoch, is_best, save_path=checkpoint_path, save_freq=args.save_freq)
 
     logger.info("Best val ACC %.4f", best_acc)
-    writer.close()
 
 
-def train(model, train_loader, loss_fn, optimizer, epoch, device, scaler, writer, args):
+def train(model, train_loader, loss_fn, optimizer, epoch, device, scaler, args):
     model.train()
     count = 0
     correct = 0
@@ -171,11 +153,6 @@ def train(model, train_loader, loss_fn, optimizer, epoch, device, scaler, writer
                     images, labels, args.mixup_alpha)
                 images, labels_a, labels_b = map(
                     Variable, (images, labels_a, labels_b))
-
-            if epoch == 1:
-                img_grid = vutils.make_grid(
-                    images, nrow=10, normalize=True, scale_each=True)
-                writer.add_image("Augemented image", img_grid, i)
 
             if args.batch_weight:
                 outputs, auxi = model(images)

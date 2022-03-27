@@ -62,7 +62,7 @@ def prepare_data(data):
     return image_array, image_label
 
 
-def get_dataloaders(path='datasets/fer2013/fer2013.csv', bs=64, augment=True):
+def get_dataloaders(path='datasets/fer2013/fer2013.csv', bs=64, Ncrop=False, augment=True):
     """ Prepare train, val, & test dataloaders
         Augment training data using:
             - cropping
@@ -80,40 +80,67 @@ def get_dataloaders(path='datasets/fer2013/fer2013.csv', bs=64, augment=True):
 
     mu, st = 0, 255
 
-    test_transform = transforms.Compose([
-        transforms.Grayscale(),
-        transforms.TenCrop(40),
-        transforms.Lambda(lambda crops: torch.stack(
-            [transforms.ToTensor()(crop) for crop in crops])),
-        transforms.Lambda(lambda tensors: torch.stack(
-            [transforms.Normalize(mean=(mu,), std=(st,))(t) for t in tensors])),
-    ])
-    if augment:
-        train_transform = transforms.Compose([
+    if Ncrop == True:
+
+        test_transform = transforms.Compose([
             transforms.Grayscale(),
-            transforms.RandomResizedCrop(48, scale=(0.8, 1.2)),
-            transforms.RandomApply([transforms.ColorJitter(
-                brightness=0.5, contrast=0.5, saturation=0.5)], p=0.5),
-            transforms.RandomApply(
-                [transforms.RandomAffine(0, translate=(0.2, 0.2))], p=0.5),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomApply([transforms.RandomRotation(10)], p=0.5),
-            transforms.FiveCrop(40),
+            transforms.TenCrop(40),
             transforms.Lambda(lambda crops: torch.stack(
                 [transforms.ToTensor()(crop) for crop in crops])),
             transforms.Lambda(lambda tensors: torch.stack(
                 [transforms.Normalize(mean=(mu,), std=(st,))(t) for t in tensors])),
-            transforms.Lambda(lambda tensors: torch.stack(
-                [transforms.RandomErasing()(t) for t in tensors])),
         ])
+        if augment:
+            train_transform = transforms.Compose([
+                transforms.Grayscale(),
+                transforms.RandomResizedCrop(48, scale=(0.8, 1.2)),
+                transforms.RandomApply([transforms.ColorJitter(
+                    brightness=0.5, contrast=0.5, saturation=0.5)], p=0.5),
+                transforms.RandomApply(
+                    [transforms.RandomAffine(0, translate=(0.2, 0.2))], p=0.5),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomApply([transforms.RandomRotation(10)], p=0.5),
+                transforms.FiveCrop(40),
+                transforms.Lambda(lambda crops: torch.stack(
+                    [transforms.ToTensor()(crop) for crop in crops])),
+                transforms.Lambda(lambda tensors: torch.stack(
+                    [transforms.Normalize(mean=(mu,), std=(st,))(t) for t in tensors])),
+                transforms.Lambda(lambda tensors: torch.stack(
+                    [transforms.RandomErasing()(t) for t in tensors])),
+            ])
+        else:
+            train_transform = test_transform
+    
     else:
-        train_transform = test_transform
+        test_transform = transforms.Compose([
+            transforms.Grayscale(),
+            transforms.Resize((64,64)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(mu,), std=(st,)),
+        ])
+        if augment:
+            train_transform = transforms.Compose([
+                transforms.Grayscale(),
+                transforms.Resize((64,64)),
+                transforms.RandomResizedCrop(64, scale=(0.8, 1.2)),
+                transforms.RandomApply([transforms.ColorJitter(
+                    brightness=0.5, contrast=0.5, saturation=0.5)], p=0.5),
+                transforms.RandomApply(
+                    [transforms.RandomAffine(0, translate=(0.2, 0.2))], p=0.5),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomApply([transforms.RandomRotation(20)], p=0.5),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=(mu,), std=(st,)),
+                transforms.RandomErasing()
+            ])
+        else:
+            train_transform = test_transform
 
     # X = np.vstack((xtrain, xval))
     # Y = np.hstack((ytrain, yval))
+    # train = CustomDataset(X, Y, train_transform)
 
     train = CustomDataset(xtrain, ytrain, train_transform)
-    # train = CustomDataset(X, Y, train_transform)
     val = CustomDataset(xtest, ytest, test_transform)
     test = CustomDataset(xtest, ytest, test_transform)
 
