@@ -29,7 +29,7 @@ parser.add_argument('--alpha', default=0.1, type=float)
 parser.add_argument('--label_smooth_value', default=0.1, type=float)
 parser.add_argument('--mixup', default=True, type=eval)
 parser.add_argument('--mixup_alpha', default=1.0, type=float)
-parser.add_argument('--Ncrop', default=True, type=eval)
+parser.add_argument('--Ncrop', default=False, type=eval)
 parser.add_argument('--data_path', default='datasets/fer2013/fer2013.csv', type=str)
 parser.add_argument('--results', default='./results', type=str)
 parser.add_argument('--save_freq', default=10, type=int)
@@ -70,7 +70,7 @@ def main():
 
     train_loader, val_loader, test_loader = get_dataloaders(
         path=args.data_path,
-        bs=args.batch_size, augment=True)
+        bs=args.batch_size, Ncrop=args.Ncrop, augment=True)
 
     logger.info('Start load model %s ...', args.arch)
     model = get_model(args.arch)
