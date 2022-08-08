@@ -60,13 +60,13 @@ class Channel_attention(nn.Module):
         return output
         
 class Spatial_attention(nn.Module):
-    def __init__(self, in_channel, reduction = 4):
+    def __init__(self, in_channel):
         super(Spatial_attention, self).__init__()
         self.relu = nn.ReLU()
         self.reduce_dim = nn.Sequential(
             nn.Conv2d(in_channel,1,1,bias=False),
-            # nn.ReLU(),
-            # nn.Conv2d(1,1,1,bias=False),
+            nn.ReLU(),
+            nn.Conv2d(1,1,1,bias=False),
             
         )
         self.sigmoid = nn.Sigmoid()
@@ -80,11 +80,11 @@ class Spatial_attention(nn.Module):
         return spatial_attention
 
 
-class RBAM(nn.Module):
-    def __init__(self, in_channels, reduce_factor=16, increase_factor=4, residual=True):
-        super(RBAM, self).__init__()
+class CBAM_plus(nn.Module):
+    def __init__(self, in_channels, reduce_factor=16, residual=True):
+        super(CBAM_plus, self).__init__()
         self.residual = residual
-        self.channel_attention = Channel_attention(channel=in_channels)
+        self.channel_attention = Channel_attention(channel=in_channels, reduction=reduce_factor)
         self.spatial_attention = Spatial_attention(in_channels)
         for m in self.modules():
                 if isinstance(m, nn.Conv2d):
@@ -126,7 +126,7 @@ class BasicBlock(nn.Module):
         self.bn1 = nn.BatchNorm2d(planes)
             
         self.bn2 = nn.BatchNorm2d(planes)
-        self.attention = RBAM(in_channels = planes)
+        self.attention = CBAM_plus(in_channels = planes)
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
